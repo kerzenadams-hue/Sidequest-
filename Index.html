@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>SideQuest — Mini-Adventures</title>
+  
+  <!-- PWA Meta Tags & Icons -->
+  <link rel="manifest" href="./manifest.json" />
+  <link rel="apple-touch-icon" href="./icon.svg" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="theme-color" content="#FFECD2" />
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            peach: {
+              50: '#FFFDF9',
+              100: '#FFECD2',
+              200: '#FFE5D9',
+              300: '#FAD0C4',
+              400: '#F28C6F',
+              500: '#E06D53',
+              600: '#C75338',
+            },
+            espresso: '#2D1E17'
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      background: linear-gradient(135deg, #FFFDF9 0%, #FFECD2 50%, #FAD0C4 100%);
+      color: #2D1E17;
+      min-height: 100vh;
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+    .glass-card {
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(242, 140, 111, 0.2);
+    }
+    /* Smooth transition for tabs and modals */
+    .fade-in {
+      animation: fadeIn 0.3s ease-in-out forwards;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body class="font-sans antialiased flex flex-col min-h-screen">
+
+  <!-- Install Banner (Hidden if already standalone) -->
+  <div id="install-banner" class="hidden bg-espresso text-peach-100 px-4 py-3 text-xs flex items-center justify-between shadow-md">
+    <div class="flex items-center space-x-2">
+      <span class="text-base">🍑</span>
+      <span>Install <b>SideQuest</b> on your home screen for the full app experience!</span>
+    </div>
+    <button onclick="dismissInstall()" class="bg-peach-500 text-white px-3 py-1 rounded-full font-bold hover:bg-peach-600 transition">Got it</button>
+  </div>
+
+  <!-- Header / Navigation -->
+  <header class="px-6 py-4 flex items-center justify-between glass-card sticky top-0 z-30 shadow-sm">
+    <div class="flex items-center space-x-3">
+      <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-peach-400 to-peach-500 flex items-center justify-center text-white text-xl shadow-md">
+        🧭
+      </div>
+      <div>
+        <h1 class="font-bold text-lg leading-tight tracking-tight text-espresso">SideQuest</h1>
+        <p class="text-xs text-peach-600 font-medium">Mini-Adventures & Confidence</p>
+      </div>
+    </div>
+
+    <!-- XP & Level Badge -->
+    <div class="flex items-center space-x-2 bg-peach-100 px-3 py-1.5 rounded-full border border-peach-300">
+      <span class="text-xs">⭐</span>
+      <span id="header-level" class="text-xs font-bold text-espresso">Level 1 Adventurer</span>
+      <span id="header-xp" class="text-[10px] bg-peach-500 text-white px-1.5 py-0.5 rounded-full">0 XP</span>
+    </div>
+  </header>
+
+  <!-- Main App Container -->
+  <main class="flex-1 max-w-md w-full mx-auto px-4 py-6 space-y-6 pb-24">
+
+    <!-- Tab Navigation -->
+    <div class="flex rounded-2xl bg-peach-200/60 p-1 border border-peach-300/50 shadow-inner">
+      <button onclick="switchTab('quest')" id="tab-quest" class="flex-1 py-2 text-xs font-bold rounded-xl transition bg-white text-espresso shadow-sm">⚡ Active Quest</button>
+      <button onclick="switchTab('log')" id="tab-log" class="flex-1 py-2 text-xs font-medium rounded-xl transition text-peach-600 hover:text-espresso">📜 Adventure Log</button>
+    </div>
+
+    <!-- QUEST VIEW -->
+    <div id="view-quest" class="space-y-6 fade-in">
+
+      <!-- Location & Parameters Card -->
+      <div class="glass-card rounded-3xl p-5 shadow-sm space-y-4">
+        <div class="flex items-center justify-between">
+          <h2 class="text-xs font-bold uppercase tracking-wider text-peach-600">📍 Quest Parameters</h2>
+          <button onclick="requestGPS()" id="gps-btn" class="text-xs bg-peach-100 hover:bg-peach-200 text-espresso px-2.5 py-1 rounded-full font-medium transition flex items-center space-x-1">
+            <span>📡 Detect Location</span>
+          </button>
+        </div>
+
+        <!-- Mode Selector -->
+        <div class="grid grid-cols-2 gap-2">
+          <button onclick="setMode('errand')" id="mode-errand" class="p-3 rounded-2xl border-2 text-left transition border-peach-500 bg-peach-100/50">
+            <div class="text-base mb-1">🛒</div>
+            <div class="font-bold text-xs">Quick Errand</div>
+            <div class="text-[10px] text-peach-600">5–15 mins • Out & About</div>
+          </button>
+          <button onclick="setMode('weekend')" id="mode-weekend" class="p-3 rounded-2xl border-2 text-left transition border-peach-200 bg-white/50">
+            <div class="text-base mb-1">🌲</div>
+            <div class="font-bold text-xs">Free Weekend</div>
+            <div class="text-[10px] text-peach-600">30–90 mins • Exploration</div>
+          </button>
+        </div>
+
+        <!-- Budget & Confidence Sliders -->
+        <div class="grid grid-cols-2 gap-3 pt-2 border-t border-peach-200">
+          <div>
+            <label class="text-[11px] font-bold text-espresso block mb-1">Budget</label>
+            <select id="budget-select" onchange="generateQuest()" class="w-full text-xs bg-white border border-peach-300 rounded-xl px-3 py-2 font-medium text-espresso focus:outline-none focus:border-peach-500">
+              <option value="0">$0 (Totally Free)</option>
+              <option value="5">&lt; $5 (Low-Cost Treat)</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-[11px] font-bold text-espresso block mb-1">Confidence Stretch</label>
+            <select id="comfort-select" onchange="generateQuest()" class="w-full text-xs bg-white border border-peach-300 rounded-xl px-3 py-2 font-medium text-espresso focus:outline-none focus:border-peach-500">
+              <option value="1">🌱 Gentle & Cozy</option>
+              <option value="2" selected>⚡ Bold & Social</option>
+              <option value="3">🔥 Main Character Energy</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Active Quest Card -->
+      <div id="quest-card" class="glass-card rounded-3xl p-6 shadow-md border-2 border-peach-400/40 space-y-5 relative overflow-hidden">
+        <div class="absolute -right-6 -top-6 w-24 h-24 bg-peach-200/50 rounded-full blur-xl pointer-events-none"></div>
+
+        <div class="flex items-center justify-between">
+          <span id="quest-badge" class="text-[11px] font-bold uppercase tracking-wider bg-peach-500 text-white px-3 py-1 rounded-full shadow-sm">Grocery Store Side Quest</span>
+          <span id="quest-time" class="text-xs font-semibold text-peach-600">⏱️ ~10 mins</span>
+        </div>
+
+        <div>
+          <h3 id="quest-title" class="text-xl font-bold text-espresso mb-2">Theisle Explorer: Speak in Accent</h3>
+          <p id="quest-desc" class="text-sm text-espresso/80 leading-relaxed">While checking out at the grocery register, ask the cashier "Is this yam grown locally?" in an enthusiastic pirate or upper-crust accent.</p>
+        </div>
+
+        <!-- Confidence Boost Tag -->
+        <div class="bg-peach-100/80 rounded-2xl p-3 border border-peach-200 flex items-center space-x-3">
+          <span class="text-lg">🛡️</span>
+          <div>
+            <div class="text-[10px] font-bold uppercase text-peach-600">Confidence Builder</div>
+            <div id="quest-confidence" class="text-xs font-medium text-espresso">Practices social playfulness and shatters the fear of tiny social judgments.</div>
+          </div>
+        </div>
+
+        <!-- Action Steps / Checklist -->
+        <div class="space-y-2 pt-2">
+          <div class="text-xs font-bold text-espresso">Quest Steps:</div>
+          <div id="quest-steps" class="space-y-2">
+            <!-- Dynamically populated steps -->
+          </div>
+        </div>
+
+        <!-- Quest Control Buttons -->
+        <div class="pt-4 flex space-x-3">
+          <button onclick="generateQuest()" class="flex-1 py-3 px-4 rounded-2xl bg-white border border-peach-300 text-espresso font-bold text-xs hover:bg-peach-50 transition shadow-sm">
+            🔀 Shuffle Quest
+          </button>
+          <button onclick="completeQuest()" id="complete-btn" disabled class="flex-1 py-3 px-4 rounded-2xl bg-peach-300 text-white font-bold text-xs opacity-50 cursor-not-allowed transition shadow-md">
+            ✨ Complete Quest (+50 XP)
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ADVENTURE LOG VIEW -->
+    <div id="view-log" class="space-y-4 hidden fade-in">
+      <div class="glass-card rounded-3xl p-5 shadow-sm space-y-3">
+        <h2 class="text-xs font-bold uppercase tracking-wider text-peach-600">📜 Completed Quests</h2>
+        <div id="log-list" class="space-y-3">
+          <!-- Populated via JS -->
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- POST-QUEST REFLECTION MODAL -->
+  <div id="reflection-modal" class="fixed inset-0 bg-espresso/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="glass-card rounded-3xl p-6 max-w-sm w-full space-y-4 shadow-xl border-2 border-peach-400 fade-in bg-white">
+      <div class="text-center space-y-1">
+        <div class="text-4xl mb-2">🎉</div>
+        <h3 class="text-lg font-bold text-espresso">Quest Accomplished!</h3>
+        <p class="text-xs text-peach-600">You earned +50 XP and grew your confidence!</p>
+      </div>
+
+      <div class="space-y-2">
+        <label class="text-xs font-bold text-espresso block">How did it feel? (Optional memory note)</label>
+        <textarea id="reflection-note" placeholder="I was nervous at first, but the cashier smiled and it felt amazing!" class="w-full text-xs bg-peach-50 border border-peach-300 rounded-2xl p-3 text-espresso focus:outline-none focus:border-peach-500 h-24 resize-none"></textarea>
+      </div>
+
+      <button onclick="saveReflection()" class="w-full py-3 rounded-2xl bg-peach-500 hover:bg-peach-600 text-white font-bold text-xs shadow-md transition">
+        Save to Adventure Log ✨
+      </button>
+    </div>
+  </div>
+
+  <!-- JavaScript Application Logic -->
+  <script>
+    // State
+    let currentMode = 'errand';
+    let userXP = parseInt(localStorage.getItem('sq_xp') || '0');
+    let userLevel = parseInt(localStorage.getItem('sq_level') || '1');
+    let questLog = JSON.parse(localStorage.getItem('sq_log') || '[]');
+    let currentQuest = null;
+    let stepsCompleted = {};
+
+    // Quest Database
+    const quests = {
+      errand: [
+        {
+          title: "The Polite Interrogator",
+          desc: "While paying for your item at the grocery store or cafe, ask the cashier: 'What's the most unusual item someone bought today?'",
+          confidence: "Builds spontaneous conversational confidence and breaks autopilot.",
+          cost: 0,
+          comfort: 1,
+          steps: ["Pick an errand destination", "Wait for checkout", "Ask the question with a warm smile", "Accept the fun answer"]
+        },
+        {
+          title: "Architecture Detective",
+          desc: "Walk your normal errand route with your head tilted up. Find one architectural detail (a gargoyle, unusual window shape, or brick pattern) you've never noticed before.",
+          confidence: "Trains presence and mindful awareness of your immediate surroundings.",
+          cost: 0,
+          comfort: 1,
+          steps: ["Step outside your door", "Look up at second-story buildings", "Spot one unique architectural detail", "Pause for 10 seconds to observe it"]
+        },
+        {
+          title: "The Compliment Catalyst",
+          desc: "Give a genuine, specific compliment to a stranger doing a service job (e.g., mail carrier, barista, librarian) about their energy or attention to detail.",
+          confidence: "Strengthens social courage and boosts community connection.",
+          cost: 0,
+          comfort: 2,
+          steps: ["Identify someone working hard", "Notice something specific to praise", "Deliver the compliment clearly without lingering"]
+        },
+        {
+          title: "The Scenic Detour",
+          desc: "Take an unfamiliar side street or alleyway on your way to your destination that you have never walked down before.",
+          confidence: "Overcomes routine hesitation and builds spatial confidence.",
+          cost: 0,
+          comfort: 1,
+          steps: ["Open map or look ahead", "Choose an alternate parallel street", "Walk down it noticing 3 distinct things"]
+        },
+        {
+          title: "The $1 Mystery Snack",
+          desc: "Go into a convenience store or bakery and buy the cheapest single item you have never tasted before (under $5).",
+          confidence: "Embraces micro-novelty and reduces perfectionism.",
+          cost: 5,
+          comfort: 2,
+          steps: ["Enter a local shop", "Browse snacks under $5", "Purchase the unfamiliar item", "Taste-test it outside"]
+        }
+      ],
+      weekend: [
+        {
+          title: "The Park Botanist",
+          desc: "Visit a local park, find a tree or flower you don't recognize, and spend 5 minutes sketching it or studying its leaves.",
+          confidence: "Fosters quiet confidence in solitude and deep focus.",
+          cost: 0,
+          comfort: 1,
+          steps: ["Walk to the nearest park", "Find an interesting plant", "Observe its texture and color for 5 mins"]
+        },
+        {
+          title: "Bench Philosopher",
+          desc: "Sit on a public bench in a busy square for 15 minutes with no phone or music. Write down 3 interesting observations in your notes app.",
+          confidence: "Builds comfort with stillness and public solitude.",
+          cost: 0,
+          comfort: 2,
+          steps: ["Find a public bench", "Put phone away in pocket", "Observe people and life for 15 mins", "Note down 3 insights"]
+        },
+        {
+          title: "The Local Tourist",
+          desc: "Walk into your city/town's local museum, library, or historic plaque and spend 20 minutes learning one obscure local history fact.",
+          confidence: "Claims ownership of your local geography as your playground.",
+          cost: 0,
+          comfort: 2,
+          steps: ["Locate a historic marker or library", "Step inside", "Discover one fascinating local fact", "Share it with someone"]
+        },
+        {
+          title: "The Cafe Sketchbook",
+          desc: "Order a basic tea or coffee at a cafe and spend 20 minutes writing a letter to your future self or drawing a doodle.",
+          confidence: "Practices occupying public space unapologetically.",
+          cost: 5,
+          comfort: 2,
+          steps: ["Choose a cozy cafe", "Order a beverage", "Unplug and write/draw for 20 minutes"]
+        }
+      ]
+    };
+
+    // Initialize App
+    function init() {
+      updateHeader();
+      generateQuest();
+      renderLog();
+
+      // Check if installed or standalone
+      if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true) {
+        document.getElementById('install-banner').classList.add('hidden');
+      } else {
+        document.getElementById('install-banner').classList.remove('hidden');
+      }
+    }
+
+    function dismissInstall() {
+      document.getElementById('install-banner').classList.add('hidden');
+    }
+
+    function switchTab(tab) {
+      const qTab = document.getElementById('tab-quest');
+      const lTab = document.getElementById('tab-log');
+      const qView = document.getElementById('view-quest');
+      const lView = document.getElementById('view-log');
+
+      if (tab === 'quest') {
+        qTab.className = "flex-1 py-2 text-xs font-bold rounded-xl transition bg-white text-espresso shadow-sm";
+        lTab.className = "flex-1 py-2 text-xs font-medium rounded-xl transition text-peach-600 hover:text-espresso";
+        qView.classList.remove('hidden');
+        lView.classList.add('hidden');
+      } else {
+        lTab.className = "flex-1 py-2 text-xs font-bold rounded-xl transition bg-white text-espresso shadow-sm";
+        qTab.className = "flex-1 py-2 text-xs font-medium rounded-xl transition text-peach-600 hover:text-espresso";
+        lView.classList.remove('hidden');
+        qView.classList.add('hidden');
+        renderLog();
+      }
+    }
+
+    function setMode(mode) {
+      currentMode = mode;
+      const errandBtn = document.getElementById('mode-errand');
+      const weekendBtn = document.getElementById('mode-weekend');
+
+      if (mode === 'errand') {
+        errandBtn.className = "p-3 rounded-2xl border-2 text-left transition border-peach-500 bg-peach-100/50";
+        weekendBtn.className = "p-3 rounded-2xl border-2 text-left transition border-peach-200 bg-white/50";
+      } else {
+        weekendBtn.className = "p-3 rounded-2xl border-2 text-left transition border-peach-500 bg-peach-100/50";
+        errandBtn.className = "p-3 rounded-2xl border-2 text-left transition border-peach-200 bg-white/50";
+      }
+      generateQuest();
+    }
+
+    function generateQuest() {
+      const budget = parseInt(document.getElementById('budget-select').value);
+      const comfort = parseInt(document.getElementById('comfort-select').value);
+      
+      const pool = quests[currentMode].filter(q => q.cost <= budget && q.comfort <= comfort);
+      const fallback = quests[currentMode];
+      const selectedPool = pool.length > 0 ? pool : fallback;
+
+      currentQuest = selectedPool[Math.floor(Math.random() * selectedPool.length)];
+      stepsCompleted = {};
+
+      // Render Quest
+      document.getElementById('quest-badge').innerText = currentMode === 'errand' ? '🛒 Errand Side Quest' : '🌲 Weekend Adventure';
+      document.getElementById('quest-time').innerText = currentMode === 'errand' ? '⏱️ ~10 mins' : '⏱️ ~45 mins';
+      document.getElementById('quest-title').innerText = currentQuest.title;
+      document.getElementById('quest-desc').innerText = currentQuest.desc;
+      document.getElementById('quest-confidence').innerText = currentQuest.confidence;
+
+      // Render Steps
+      const stepsContainer = document.getElementById('quest-steps');
+      stepsContainer.innerHTML = '';
+      currentQuest.steps.forEach((step, index) => {
+        stepsContainer.innerHTML += `
+          <label class="flex items-center space-x-3 p-2.5 rounded-xl bg-white/70 border border-peach-200 cursor-pointer hover:bg-white transition">
+            <input type="checkbox" onchange="toggleStep(${index})" class="w-4 h-4 text-peach-500 rounded border-peach-300 focus:ring-peach-400">
+            <span class="text-xs font-medium text-espresso">${step}</span>
+          </label>
+        `;
+      });
+
+      updateCompleteButton();
+    }
+
+    function toggleStep(index) {
+      stepsCompleted[index] = !stepsCompleted[index];
+      updateCompleteButton();
+    }
+
+    function updateCompleteButton() {
+      const totalSteps = currentQuest.steps.length;
+      const checkedCount = Object.values(stepsCompleted).filter(Boolean).length;
+      const btn = document.getElementById('complete-btn');
+
+      if (checkedCount === totalSteps) {
+        btn.disabled = false;
+        btn.classList.remove('opacity-50', 'cursor-not-allowed', 'bg-peach-300');
+        btn.classList.add('bg-peach-500', 'hover:bg-peach-600', 'cursor-pointer');
+      } else {
+        btn.disabled = true;
+        btn.classList.add('opacity-50', 'cursor-not-allowed', 'bg-peach-300');
+        btn.classList.remove('bg-peach-500', 'hover:bg-peach-600', 'cursor-pointer');
+      }
+    }
+
+    function completeQuest() {
+      document.getElementById('reflection-modal').classList.
