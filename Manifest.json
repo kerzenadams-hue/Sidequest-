@@ -1,0 +1,19 @@
+{
+  "name": "SideQuest — Mini-Adventures",
+  "short_name": "SideQuest",
+  "description": "Turn boring errands and free weekends into confidence-building mini-adventures.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FFFDF9",
+  "theme_color": "#FFECD2",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
